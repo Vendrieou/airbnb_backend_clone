@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  property: one
+  user_id: 1
+  start_date: 2026-04-01
+  end_date: 2026-04-01
+  idempotency_key: MyString
+
+two:
+  property: two
+  user_id: 1
+  start_date: 2026-04-01
+  end_date: 2026-04-01
+  idempotency_key: MyString
