@@ -1,37 +1,37 @@
 ```
 # Dependencies
-node_modules/
 vendor/bundle/
 
-# Logs
+# Logs and temp files
 *.log
-log/
+*.tmp
 
-# Environment variables
+# Environment
 .env
 .env.local
-.env.*
+*.env.*
 
-# Ruby/Rails specific
-*.gem
-*.rbc
-.bundle/
-Gemfile.lock
-.rspec
-Guardfile
-.rubocop.yml
-config/credentials/*.key
-public/assets
-public/packs
-public/packs-test
-storage/
-.tmp/
+# Coverage
 coverage/
-.rake_tasks
-.rbenv-vars
-.ruby-version
+*.cov
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# Database
+db/*.sqlite3
+db/*.sqlite3-journal
+
+# Temporary upload files
+/storage/tmp/
+
+# Assets
+public/assets/
+public/packs/
+public/packs-test/
+tmp/cache/bootsnap*
+
+# Documentation
+doc/api/
+
+# Yarn
+.yarn/
+yarn-error.log
 ```
