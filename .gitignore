@@ -1,68 +1,50 @@
 ```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.class
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
+*.swp
+*.swo
+*.tmp
+
 # Dependencies
 node_modules/
-vendor/bundle/
-
-# Logs
-*.log
-log/*.log
-
-# Temp files
-*.tmp
-*.swp
-*~
-
-# Environment
+venv/
+.venv/
 .env
 .env.local
 .env.*
 
-# Coverage
-coverage/
-*.gcov
-*.lcov
-
-# Build artifacts
+# Build directories
 dist/
 build/
-*.o
-*.obj
-*.so
-*.a
-*.dylib
-*.dll
-*.exe
+target/
+.gradle/
 
-# Cache
-.cache/
-*.cache
-.rspec_memory
-.bundle/
-.jruby_cache/
+# Logs
+*.log
 
-# Testing
-.rspec
-capybara-*.html
-_saved_session
-spec/reports/*
-test/tmp/*
-test/version_tmp/*
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
-# Documentation
-doc/api/
+# Editors
+.vscode/
+.idea/
 
-# Security
-*.key
-*.pem
-*.crt
-*.cert
-
-# OS generated files
+# System files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
 ```

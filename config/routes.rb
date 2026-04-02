@@ -5,6 +5,23 @@
     get :guest_dashboard, to: 'portals#guest_dashboard'
   end
 
+  # Admin area for facility management
+  namespace :admin do
+    resources :facilities do
+      member do
+        get :availability
+      end
+    end
+    
+    resources :facility_bookings, only: [:index, :show] do
+      member do
+        post :approve
+        post :reject
+        post :cancel
+      end
+    end
+  end
+
   # Property bookings
   resources :bookings, only: [:create]
   
@@ -20,6 +37,9 @@
     end
   end
   
+  # Facility availability API endpoint
+  get '/api/facilities/:id/availability', to: 'facilities#availability', as: :facility_availability
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
