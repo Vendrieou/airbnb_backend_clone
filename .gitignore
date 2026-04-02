@@ -1,37 +1,68 @@
 ```
 # Dependencies
+node_modules/
 vendor/bundle/
 
-# Logs and temp files
+# Logs
 *.log
+log/*.log
+
+# Temp files
 *.tmp
+*.swp
+*~
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
 # Coverage
 coverage/
-*.cov
+*.gcov
+*.lcov
 
-# Database
-db/*.sqlite3
-db/*.sqlite3-journal
+# Build artifacts
+dist/
+build/
+*.o
+*.obj
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
 
-# Temporary upload files
-/storage/tmp/
+# Cache
+.cache/
+*.cache
+.rspec_memory
+.bundle/
+.jruby_cache/
 
-# Assets
-public/assets/
-public/packs/
-public/packs-test/
-tmp/cache/bootsnap*
+# Testing
+.rspec
+capybara-*.html
+_saved_session
+spec/reports/*
+test/tmp/*
+test/version_tmp/*
 
 # Documentation
 doc/api/
 
-# Yarn
-.yarn/
-yarn-error.log
+# Security
+*.key
+*.pem
+*.crt
+*.cert
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 ```
