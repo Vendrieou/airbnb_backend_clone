@@ -30,7 +30,6 @@ class Payment < ApplicationRecord
   end
 
   def formatted_amount
-    Money.new(amount_cents, currency).format if defined?(Money)
     "#{currency} #{sprintf('%.2f', amount)}"
   end
 end
