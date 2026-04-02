@@ -1,47 +1,37 @@
 ```
 # Dependencies
-vendor/bundle/
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+vendor/bundle/
+
+# Logs
+*.log
+log/
 
 # Environment variables
 .env
 .env.local
 .env.*
-!.env.example
 
-# Build outputs
-public/packs/
-public/packs-test/
-coverage/
-build/
-dist/
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
-Thumbs.db
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Rails specific
+# Ruby/Rails specific
+*.gem
 *.rbc
-capybara-*.html
+.bundle/
+Gemfile.lock
 .rspec
 Guardfile
-.byebug_history
+.rubocop.yml
+config/credentials/*.key
+public/assets
+public/packs
+public/packs-test
+storage/
+.tmp/
+coverage/
+.rake_tasks
+.rbenv-vars
 .ruby-version
-.sass-cache/
-css/*.css
-js/*.js
+
+# OS generated files
+.DS_Store
+Thumbs.db
 ```
