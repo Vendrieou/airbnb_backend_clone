@@ -5,33 +5,64 @@ vendor/bundle/
 
 # Logs
 *.log
-log/
+log/*.log
 
-# Environment variables
+# Temp files
+*.tmp
+*.swp
+*~
+
+# Environment
 .env
 .env.local
 .env.*
 
-# Ruby/Rails specific
-*.gem
-*.rbc
-.bundle/
-Gemfile.lock
-.rspec
-Guardfile
-.rubocop.yml
-config/credentials/*.key
-public/assets
-public/packs
-public/packs-test
-storage/
-.tmp/
+# Coverage
 coverage/
-.rake_tasks
-.rbenv-vars
-.ruby-version
+*.gcov
+*.lcov
+
+# Build artifacts
+dist/
+build/
+*.o
+*.obj
+*.so
+*.a
+*.dylib
+*.dll
+*.exe
+
+# Cache
+.cache/
+*.cache
+.rspec_memory
+.bundle/
+.jruby_cache/
+
+# Testing
+.rspec
+capybara-*.html
+_saved_session
+spec/reports/*
+test/tmp/*
+test/version_tmp/*
+
+# Documentation
+doc/api/
+
+# Security
+*.key
+*.pem
+*.crt
+*.cert
 
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 ```
