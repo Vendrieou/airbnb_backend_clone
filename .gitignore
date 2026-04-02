@@ -1,82 +1,50 @@
 ```
-# Dependencies
-node_modules/
-vendor/bundle/
+# Executables/binaries
+bin/
 
-# Logs
-*.log
-log/
-
-# Temporary files
-*.tmp
-*.swp
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+InstalledFiles
+pkg/
+spec/reports/
+test/tmp/
+test/version_tmp/
+tmp/
 
 # Environment
 .env
 .env.local
-*.env.*
+.env.*
 
-# Coverage
-coverage/
-htmlcov/
+# Dependencies
+vendor/bundle/
+node_modules/
+*.lock
 
-# Build artifacts
-dist/
-build/
-*.o
-*.obj
-*.so
-*.a
-*.dll
-*.exe
+# Logs
+*.log
+.byebug_history
 
-# Compression files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
-
-# Editors
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Python specific
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+# Build/test artifacts
+build/
+dist/
+target/
+*.o
+*.obj
+*.a
 *.so
-*.egg-info/
-.eggs/
-.coverage
-.mypy_cache/
-.pytest_cache/
-.tox/
-.coverage*
-nosetests.xml
+*.dylib
+*.dll
+*.exe
+*.out
 ```
