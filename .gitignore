@@ -1,27 +1,82 @@
 ```
-# Ruby/Rails specific
-*.gem
-*.rbc
-coverage/
-*.ttin
-*.backtrace
-.build/
-.bundle/
-.jruby.gem.cache
-.guard-int/
-.rspec_parallel
+# Dependencies
+node_modules/
 vendor/bundle/
-.rbenv-gemsets
-.rbenv-version
-.rubocop.yml
-.ruby-version
-.ruby-gemset
-config/database.yml
-config/secrets.yml
-config/credentials.yml.enc
-tmp/
+
+# Logs
+*.log
 log/
-public/system/
-storage/
-.sass-cache/
+
+# Temporary files
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Coverage
+coverage/
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+
+# Compression files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg-info/
+.eggs/
+.coverage
+.mypy_cache/
+.pytest_cache/
+.tox/
+.coverage*
+nosetests.xml
 ```
