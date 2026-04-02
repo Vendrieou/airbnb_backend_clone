@@ -1,50 +1,47 @@
 ```
-# Executables/binaries
-bin/
-
-# Ruby specific
-*.gem
-*.rbc
-coverage/
-InstalledFiles
-pkg/
-spec/reports/
-test/tmp/
-test/version_tmp/
-tmp/
-
-# Environment
-.env
-.env.local
-.env.*
-
 # Dependencies
 vendor/bundle/
 node_modules/
-*.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*
+!.env.example
+
+# Build outputs
+public/packs/
+public/packs-test/
+coverage/
+build/
+dist/
 
 # Logs
 *.log
-.byebug_history
 
-# Editor/IDE
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-.DS_Store
-Thumbs.db
 
-# Build/test artifacts
-build/
-dist/
-target/
-*.o
-*.obj
-*.a
-*.so
-*.dylib
-*.dll
-*.exe
-*.out
+# Rails specific
+*.rbc
+capybara-*.html
+.rspec
+Guardfile
+.byebug_history
+.ruby-version
+.sass-cache/
+css/*.css
+js/*.js
 ```
