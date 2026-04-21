@@ -1,50 +1,46 @@
 ```
-# Compiled and build artifacts
-*.pyc
-__pycache__/
-*.class
-*.o
-*.obj
-*.exe
-*.dll
-*.so
-*.a
-*.out
-*.swp
-*.swo
-*.tmp
-
 # Dependencies
-node_modules/
-venv/
-.venv/
+vendor/bundle/
+.bundle/
+
+# Logs
+log/*.log
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Environment
 .env
 .env.local
 .env.*
 
-# Build directories
-dist/
-build/
-target/
-.gradle/
-
-# Logs
-*.log
-
 # Coverage
 coverage/
-htmlcov/
-.coverage
+*.cov
 
-# Editors
-.vscode/
-.idea/
+# Build artifacts
+public/assets/
 
-# System files
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Cache directories
-.mypy_cache/
-.pytest_cache/
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+InstalledFiles
+pkg/
+spec/reports/
+test/tmp/
+test/version_tmp/
+tmp/
+
+# Rails specific
+db/*.sqlite3
+db/*.sqlite3-journal
+*.dump
+.rake_tasks
 ```
