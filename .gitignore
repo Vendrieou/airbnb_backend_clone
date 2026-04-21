@@ -1,16 +1,15 @@
 ```
 # Dependencies
-node_modules/
 vendor/bundle/
+.bundle/
 
 # Logs
-*.log
 log/*.log
+*.log
 
-# Temp files
-*.tmp
-*.swp
-*~
+# Temporary files
+tmp/
+temp/
 
 # Environment
 .env
@@ -19,50 +18,29 @@ log/*.log
 
 # Coverage
 coverage/
-*.gcov
-*.lcov
+*.cov
 
 # Build artifacts
-dist/
-build/
-*.o
-*.obj
-*.so
-*.a
-*.dylib
-*.dll
-*.exe
-
-# Cache
-.cache/
-*.cache
-.rspec_memory
-.bundle/
-.jruby_cache/
-
-# Testing
-.rspec
-capybara-*.html
-_saved_session
-spec/reports/*
-test/tmp/*
-test/version_tmp/*
-
-# Documentation
-doc/api/
-
-# Security
-*.key
-*.pem
-*.crt
-*.cert
+public/assets/
 
 # OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+
+# Ruby specific
+*.gem
+*.rbc
+coverage/
+InstalledFiles
+pkg/
+spec/reports/
+test/tmp/
+test/version_tmp/
+tmp/
+
+# Rails specific
+db/*.sqlite3
+db/*.sqlite3-journal
+*.dump
+.rake_tasks
 ```
