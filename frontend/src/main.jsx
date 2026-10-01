@@ -6,6 +6,8 @@ import RentalPlansPage from './pages/RentalPlansPage.jsx';
 import BookingDetailPage from './pages/BookingDetailPage.jsx';
 import MyBookingsPage from './pages/MyBookingsPage.jsx';
 import HousekeepingBoardPage from './pages/HousekeepingBoardPage.jsx';
+import ChatPage from './pages/ChatPage.jsx';
+import MasterDataPage from './pages/MasterDataPage.jsx';
 import './styles.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -17,6 +19,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/bookings" element={<MyBookingsPage />} />
           <Route path="/bookings/:id" element={<BookingDetailPage />} />
           <Route path="/housekeeping" element={<HousekeepingBoardPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
+          <Route path="/master-data" element={<MasterDataPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

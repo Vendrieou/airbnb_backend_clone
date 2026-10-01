@@ -40,6 +40,7 @@ class RentalInstallmentPayer
 
       # succeed! -> catat amount_paid, cocokkan ke angsuran, sinkronkan status
       payment.succeed!
+      notify_payment!(payment)
       Result.new(payment: payment.reload)
     end
   rescue ActiveRecord::RecordInvalid => e
@@ -58,6 +59,13 @@ class RentalInstallmentPayer
     raise BookingError, "Booking is cancelled" if booking.status.in?(%w[cancelled_by_guest cancelled_by_host rejected])
     raise BookingError, "Booking already fully paid" if booking.fully_paid?
     raise BookingError, "Payment method not supported" unless RentalPayment::METHODS.include?(payment_method)
+  end
+
+  # Kirim struk pembayaran via WhatsApp (non-blocking; provider 'fake' = log saja)
+  def notify_payment!(payment)
+    RentalPaymentNotificationJob.perform_later(payment.id)
+  rescue StandardError => e
+    Rails.logger.warn("[Payer] enqueue notif WA gagal: #{e.message}")
   end
 
   def resolved_kind

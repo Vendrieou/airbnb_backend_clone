@@ -51,6 +51,11 @@ class RentalBookingCreator
         booking.save!
         create_installment_plan!(booking) if pay_in_installments && booking.installment_count.positive?
 
+        begin
+          RentalBookingNotificationJob.perform_later(booking.id)
+        rescue StandardError
+          nil
+        end
         Result.new(booking: booking.reload)
       end
     end

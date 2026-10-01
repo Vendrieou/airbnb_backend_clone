@@ -1,1966 +1,2622 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "StayHub API \u2014 Sewa Harian/Mingguan/Bulanan, Cicilan & Housekeeping Kanban",
-    "description": "Dokumentasi API (struktur ala Swagger Product Portal) untuk aplikasi Rails ini.\n\nFitur yang tercakup:\n- **Rental Plans**: paket sewa `daily` / `weekly` / `monthly`, dengan opsi cicilan (DP + angsuran).\n- **Rental Bookings**: pemesanan sewa, estimasi cicilan, cek ketersediaan, pembayaran DP/angsuran/pelunasan.\n- **Facility Bookings**: booking fasilitas (gym, ruang rapat, dll) + approve/reject host.\n- **Housekeeping Kanban**: board draft \u2192 todo \u2192 in_progress \u2192 review \u2192 done, auto-task setelah checkout tidak diperpanjang lewat H-3, upload image bukti kerja.\n- **Portals**: dashboard host & guest.\n\nAutentikasi: `Authorization: Bearer <jwt>` pada seluruh endpoint terproteksi.\n",
-    "version": "1.0.0",
-    "contact": {
-      "name": "StayHub Dev Team"
-    }
+ "openapi": "3.0.3",
+ "info": {
+  "title": "StayHub API \u2014 Sewa Harian/Mingguan/Bulanan, Cicilan & Housekeeping Kanban",
+  "description": "Dokumentasi API (struktur ala Swagger Product Portal) untuk aplikasi Rails ini.\n\nFitur yang tercakup:\n- **Rental Plans**: paket sewa `daily` / `weekly` / `monthly`, dengan opsi cicilan (DP + angsuran).\n- **Rental Bookings**: pemesanan sewa, estimasi cicilan, cek ketersediaan, pembayaran DP/angsuran/pelunasan.\n- **Facility Bookings**: booking fasilitas (gym, ruang rapat, dll) + approve/reject host.\n- **Housekeeping Kanban**: board draft \u2192 todo \u2192 in_progress \u2192 review \u2192 done, auto-task setelah checkout tidak diperpanjang lewat H-3, upload image bukti kerja.\n- **Portals**: dashboard host & guest.\n\nAutentikasi: `Authorization: Bearer <jwt>` pada seluruh endpoint terproteksi.\n",
+  "version": "1.0.0",
+  "contact": {
+   "name": "StayHub Dev Team"
+  }
+ },
+ "servers": [
+  {
+   "url": "https://api.stayhub.example.com",
+   "description": "Production"
   },
-  "servers": [
-    {
-      "url": "https://api.stayhub.example.com",
-      "description": "Production"
-    },
-    {
-      "url": "http://localhost:3000",
-      "description": "Local development"
-    }
-  ],
-  "tags": [
-    {
-      "name": "RentalPlans",
-      "description": "Paket sewa harian / mingguan / bulanan"
-    },
-    {
-      "name": "RentalBookings",
-      "description": "Transaksi sewa & skema cicilan"
-    },
-    {
-      "name": "FacilityBookings",
-      "description": "Booking fasilitas hotel/villa"
-    },
-    {
-      "name": "Housekeeping",
-      "description": "Kanban board housekeeping (draft \u2192 selesai, upload image)"
-    },
-    {
-      "name": "Portals",
-      "description": "Dashboard host & guest"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
-  "paths": {
-    "/rental_plans": {
-      "get": {
-        "tags": [
-          "RentalPlans"
-        ],
-        "summary": "Daftar paket sewa",
-        "description": "Filter per periode (daily/weekly/monthly), per facility, atau hanya yang bisa dicicil.",
-        "operationId": "listRentalPlans",
-        "parameters": [
-          {
-            "name": "period",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "daily",
-                "weekly",
-                "monthly"
-              ]
-            },
-            "example": "monthly"
-          },
-          {
-            "name": "facility_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "installments",
-            "in": "query",
-            "description": "true = hanya paket yang mendukung cicilan",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Daftar paket sewa",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_plans": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/RentalPlan"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "RentalPlans"
-        ],
-        "summary": "Buat paket sewa (host)",
-        "description": "Dibuat nested di bawah facility: `POST /facilities/{facility_id}/rental_plans`.\nValidasi kelipatan periode: weekly harus kelipatan 7 malam, monthly kelipatan 30.\n",
-        "operationId": "createRentalPlan",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RentalPlanInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Paket tersimpan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_plan": {
-                      "$ref": "#/components/schemas/RentalPlan"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
-          }
-        }
-      }
-    },
-    "/rental_plans/{id}": {
-      "get": {
-        "tags": [
-          "RentalPlans"
-        ],
-        "summary": "Detail paket sewa",
-        "operationId": "getRentalPlan",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Detail paket",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_plan": {
-                      "$ref": "#/components/schemas/RentalPlan"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/rental_plans/{id}/availability": {
-      "get": {
-        "tags": [
-          "RentalPlans"
-        ],
-        "summary": "Cek ketersediaan tanggal",
-        "description": "Menandai tanggal yang sudah dibooking dalam rentang yang diminta.",
-        "operationId": "checkRentalAvailability",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          },
-          {
-            "name": "start_date",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-11-01"
-          },
-          {
-            "name": "end_date",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-12-31"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Info ketersediaan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "available": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "booked_ranges": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "start_date": {
-                            "type": "string",
-                            "format": "date"
-                          },
-                          "end_date": {
-                            "type": "string",
-                            "format": "date"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rental_plans/{id}/installment_estimate": {
-      "get": {
-        "tags": [
-          "RentalPlans"
-        ],
-        "summary": "Simulasi skema cicilan",
-        "description": "Preview DP + jadwal angsuran sebelum membuat booking (quantity harus kelipatan periode).",
-        "operationId": "installmentEstimate",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          },
-          {
-            "name": "quantity",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "Jumlah periode (mis. 2 bulan)",
-            "example": 2
-          },
-          {
-            "name": "start_date",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-11-01"
-          },
-          {
-            "name": "end_date",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "example": "2026-12-31"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Estimasi cicilan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstallmentEstimate"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Durasi tidak sesuai kelipatan periode / cicilan tidak diaktifkan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rental_plans/{rental_plan_id}/bookings": {
-      "post": {
-        "tags": [
-          "RentalBookings"
-        ],
-        "summary": "Buat booking sewa (bisa langsung pilih dicicil)",
-        "operationId": "createRentalBooking",
-        "parameters": [
-          {
-            "name": "rental_plan_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RentalBookingInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Booking dibuat (+ schedule cicilan bila `pay_in_installments=true`)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_booking": {
-                      "$ref": "#/components/schemas/RentalBooking"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Bentrok tanggal / idempotency key dipakai ulang dengan payload beda",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
-          }
-        }
-      }
-    },
-    "/rental_bookings": {
-      "get": {
-        "tags": [
-          "RentalBookings"
-        ],
-        "summary": "Daftar booking sewa milik user",
-        "operationId": "listRentalBookings",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending_payment",
-                "confirmed",
-                "active",
-                "completed",
-                "cancelled"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Daftar booking",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_bookings": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/RentalBooking"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rental_bookings/{id}": {
-      "get": {
-        "tags": [
-          "RentalBookings"
-        ],
-        "summary": "Detail booking + jadwal cicilan",
-        "operationId": "getRentalBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/BookingId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Detail booking",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_booking": {
-                      "allOf": [
-                        {
-                          "$ref": "#/components/schemas/RentalBooking"
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "installments": {
-                              "type": "array",
-                              "items": {
-                                "$ref": "#/components/schemas/Installment"
-                              }
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/rental_bookings/{id}/pay": {
-      "post": {
-        "tags": [
-          "RentalBookings"
-        ],
-        "summary": "Bayar DP / angsuran / pelunasan",
-        "description": "Dana dicocokkan otomatis: DP lebih dulu, lalu angsuran tertua.\nSaat lunas \u2192 payment_status `paid`, booking otomatis `confirmed`/`active`.\n",
-        "operationId": "payRentalBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/BookingId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "amount"
-                ],
-                "properties": {
-                  "amount": {
-                    "type": "number",
-                    "example": 6000000
-                  },
-                  "payment_method": {
-                    "type": "string",
-                    "enum": [
-                      "transfer",
-                      "card",
-                      "ewallet",
-                      "cash"
-                    ],
-                    "default": "transfer"
-                  },
-                  "reference": {
-                    "type": "string",
-                    "description": "No. referensi transfer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Pembayaran tercatat",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "payment": {
-                      "$ref": "#/components/schemas/RentalPayment"
-                    },
-                    "rental_booking": {
-                      "$ref": "#/components/schemas/RentalBooking"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Jumlah melebihi sisa tagihan / booking dibatalkan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/rental_bookings/{id}/cancel": {
-      "post": {
-        "tags": [
-          "RentalBookings"
-        ],
-        "summary": "Batalkan booking sewa",
-        "operationId": "cancelRentalBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/BookingId"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "reason": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Booking dibatalkan",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "rental_booking": {
-                      "$ref": "#/components/schemas/RentalBooking"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/facilities": {
-      "get": {
-        "tags": [
-          "FacilityBookings"
-        ],
-        "summary": "Daftar fasilitas",
-        "operationId": "listFacilities",
-        "parameters": [
-          {
-            "name": "property_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "example": "gym"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Daftar fasilitas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "facilities": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Facility"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/facilities/{facility_id}/bookings": {
-      "post": {
-        "tags": [
-          "FacilityBookings"
-        ],
-        "summary": "Booking fasilitas",
-        "operationId": "createFacilityBooking",
-        "parameters": [
-          {
-            "name": "facility_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "booking_date",
-                  "start_time"
-                ],
-                "properties": {
-                  "booking_date": {
-                    "type": "string",
-                    "format": "date",
-                    "example": "2026-10-15"
-                  },
-                  "start_time": {
-                    "type": "string",
-                    "example": "14:00"
-                  },
-                  "quantity": {
-                    "type": "integer",
-                    "default": 1
-                  },
-                  "special_requests": {
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Booking dibuat (status pending sampai disetujui host)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "booking": {
-                      "$ref": "#/components/schemas/FacilityBooking"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
-          }
-        }
-      }
-    },
-    "/facility_bookings/{id}/cancel": {
-      "post": {
-        "tags": [
-          "FacilityBookings"
-        ],
-        "summary": "Batalkan booking fasilitas (guest)",
-        "operationId": "cancelFacilityBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FacilityBookingId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Dibatalkan"
-          }
-        }
-      }
-    },
-    "/admin/facility_bookings/{id}/approve": {
-      "post": {
-        "tags": [
-          "FacilityBookings"
-        ],
-        "summary": "Setujui booking (host/admin)",
-        "operationId": "approveFacilityBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FacilityBookingId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Disetujui"
-          }
-        }
-      }
-    },
-    "/admin/facility_bookings/{id}/reject": {
-      "post": {
-        "tags": [
-          "FacilityBookings"
-        ],
-        "summary": "Tolak booking (host/admin)",
-        "operationId": "rejectFacilityBooking",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/FacilityBookingId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ditolak"
-          }
-        }
-      }
-    },
-    "/housekeeping/boards": {
-      "get": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Daftar Kanban board housekeeping",
-        "operationId": "listHousekeepingBoards",
-        "parameters": [
-          {
-            "name": "property_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Daftar board beserta kolom-kolomnya",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "boards": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/HousekeepingBoard"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/housekeeping/boards/{id}": {
-      "get": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Board + kartu tugas per kolom (draft/todo/in_progress/review/done)",
-        "operationId": "getHousekeepingBoard",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Isi board",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "board": {
-                      "$ref": "#/components/schemas/HousekeepingBoard"
-                    },
-                    "columns": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "status": {
-                            "$ref": "#/components/schemas/TaskStatus"
-                          },
-                          "tasks": {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/components/schemas/HousekeepingTask"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks": {
-      "get": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Daftar tugas (filter status/room/board)",
-        "description": "Tugas juga dibuat **otomatis** oleh job harian 06:00: kamar yang checkout dan\ntidak ada perpanjangan booking setelah **H+3** (grace period) \u2192 kartu masuk kolom\n`draft` + notifikasi ke housekeeper/host + room di-set `maintenance`. Idempoten.\n",
-        "operationId": "listHousekeepingTasks",
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/TaskStatus"
-            }
-          },
-          {
-            "name": "room_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "board_id",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Daftar tugas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "tasks": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/HousekeepingTask"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Buat tugas manual (mulai dari kolom draft)",
-        "operationId": "createHousekeepingTask",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "room_id"
-                ],
-                "properties": {
-                  "room_id": {
-                    "type": "integer"
-                  },
-                  "board_id": {
-                    "type": "integer",
-                    "nullable": true
-                  },
-                  "title": {
-                    "type": "string",
-                    "example": "Deep cleaning kamar 305"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high",
-                      "urgent"
-                    ],
-                    "default": "medium"
-                  },
-                  "due_at": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "assigned_to_id": {
-                    "type": "integer",
-                    "nullable": true
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Tugas dibuat",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "task": {
-                      "$ref": "#/components/schemas/HousekeepingTask"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}": {
-      "get": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Detail tugas (termasuk riwayat & lampiran)",
-        "operationId": "getHousekeepingTask",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Detail tugas",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "task": {
-                      "$ref": "#/components/schemas/HousekeepingTaskDetail"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}/move": {
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Pindahkan kartu antar kolom (drag & drop)",
-        "description": "Urutan kolom wajib maju: `draft \u2192 todo \u2192 in_progress \u2192 review \u2192 done`.\nKartu **tidak bisa dipindah ke `review`/`done` tanpa minimal 1 image terupload**.\nSaat `done` dan tidak ada tugas aktif lain untuk kamar \u2192 room kembali `available`.\n",
-        "operationId": "moveHousekeepingTask",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "to_status"
-                ],
-                "properties": {
-                  "to_status": {
-                    "$ref": "#/components/schemas/TaskStatus"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Kartu berpindah kolom",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "task": {
-                      "$ref": "#/components/schemas/HousekeepingTask"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Lompat kolom ilegal / belum ada foto bukti / transisi invalid",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}/advance": {
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Majukan kartu satu kolom ke depan",
-        "operationId": "advanceHousekeepingTask",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Kartu maju satu kolom",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "task": {
-                      "$ref": "#/components/schemas/HousekeepingTask"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Butuh minimal 1 image sebelum review/done",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}/upload": {
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Upload image bukti kerja (multipart)",
-        "description": "Wajib \u22651 image sebelum kartu boleh masuk kolom `review`/`done`.",
-        "operationId": "uploadHousekeepingTaskImage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "image"
-                ],
-                "properties": {
-                  "image": {
-                    "type": "string",
-                    "format": "binary"
-                  },
-                  "caption": {
-                    "type": "string",
-                    "example": "Foto setelah bersih"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Image tersimpan (Active Storage)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "attachment": {
-                      "$ref": "#/components/schemas/TaskAttachment"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntity"
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}/assign": {
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Assign housekeeper + kirim notifikasi",
-        "operationId": "assignHousekeepingTask",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "assigned_to_id"
-                ],
-                "properties": {
-                  "assigned_to_id": {
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Tertugas & dinotifikasi"
-          }
-        }
-      }
-    },
-    "/housekeeping/tasks/{id}/cancel": {
-      "post": {
-        "tags": [
-          "Housekeeping"
-        ],
-        "summary": "Batalkan tugas",
-        "operationId": "cancelHousekeepingTask",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/TaskId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Tugas dibatalkan"
-          }
-        }
-      }
-    },
-    "/portals/host_dashboard": {
-      "get": {
-        "tags": [
-          "Portals"
-        ],
-        "summary": "Dashboard host",
-        "description": "Ringkasan booking masuk, pendapatan, tugas housekeeping aktif, angsuran jatuh tempo.",
-        "operationId": "hostDashboard",
-        "responses": {
-          "200": {
-            "description": "Data dashboard host",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "stats": {
-                      "type": "object"
-                    },
-                    "upcoming_bookings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    },
-                    "housekeeping_summary": {
-                      "type": "object"
-                    },
-                    "overdue_installments": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/portals/guest_dashboard": {
-      "get": {
-        "tags": [
-          "Portals"
-        ],
-        "summary": "Dashboard guest",
-        "description": "Booking aktif, jadwal cicilan berikutnya, wishlist.",
-        "operationId": "guestDashboard",
-        "responses": {
-          "200": {
-            "description": "Data dashboard guest",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "active_bookings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    },
-                    "next_installment": {
-                      "$ref": "#/components/schemas/Installment"
-                    },
-                    "wishlist": {
-                      "type": "array",
-                      "items": {
-                        "type": "object"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+  {
+   "url": "http://localhost:3000",
+   "description": "Local development"
+  }
+ ],
+ "tags": [
+  {
+   "name": "RentalPlans",
+   "description": "Paket sewa harian / mingguan / bulanan"
   },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
+  {
+   "name": "RentalBookings",
+   "description": "Transaksi sewa & skema cicilan"
+  },
+  {
+   "name": "FacilityBookings",
+   "description": "Booking fasilitas hotel/villa"
+  },
+  {
+   "name": "Housekeeping",
+   "description": "Kanban board housekeeping (draft \u2192 selesai, upload image)"
+  },
+  {
+   "name": "Portals",
+   "description": "Dashboard host & guest"
+  }
+ ],
+ "security": [
+  {
+   "bearerAuth": []
+  }
+ ],
+ "paths": {
+  "/rental_plans": {
+   "get": {
+    "tags": [
+     "RentalPlans"
+    ],
+    "summary": "Daftar paket sewa",
+    "description": "Filter per periode (daily/weekly/monthly), per facility, atau hanya yang bisa dicicil.",
+    "operationId": "listRentalPlans",
+    "parameters": [
+     {
+      "name": "period",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "daily",
+        "weekly",
+        "monthly"
+       ]
+      },
+      "example": "monthly"
+     },
+     {
+      "name": "facility_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
       }
-    },
-    "parameters": {
-      "PlanId": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "BookingId": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "FacilityBookingId": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "TaskId": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "integer"
-        }
+     },
+     {
+      "name": "installments",
+      "in": "query",
+      "description": "true = hanya paket yang mendukung cicilan",
+      "schema": {
+       "type": "boolean"
       }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "default": 1
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar paket sewa",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_plans": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/RentalPlan"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "RentalPlans"
+    ],
+    "summary": "Buat paket sewa (host)",
+    "description": "Dibuat nested di bawah facility: `POST /facilities/{facility_id}/rental_plans`.\nValidasi kelipatan periode: weekly harus kelipatan 7 malam, monthly kelipatan 30.\n",
+    "operationId": "createRentalPlan",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RentalPlanInput"
+       }
+      }
+     }
     },
     "responses": {
-      "NotFound": {
-        "description": "Resource tidak ditemukan",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
+     "201": {
+      "description": "Paket tersimpan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_plan": {
+           "$ref": "#/components/schemas/RentalPlan"
           }
+         }
         }
-      },
-      "UnprocessableEntity": {
-        "description": "Validasi gagal",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            }
-          }
-        }
+       }
       }
-    },
-    "schemas": {
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "example": "Durasi sewa harus kelipatan periode (monthly = 30 malam)"
-          },
-          "code": {
-            "type": "string",
-            "example": "RENTAL_PERIOD_MISMATCH"
+     },
+     "422": {
+      "$ref": "#/components/responses/UnprocessableEntity"
+     }
+    }
+   }
+  },
+  "/rental_plans/{id}": {
+   "get": {
+    "tags": [
+     "RentalPlans"
+    ],
+    "summary": "Detail paket sewa",
+    "operationId": "getRentalPlan",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/PlanId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Detail paket",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_plan": {
+           "$ref": "#/components/schemas/RentalPlan"
           }
+         }
         }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     }
+    }
+   }
+  },
+  "/rental_plans/{id}/availability": {
+   "get": {
+    "tags": [
+     "RentalPlans"
+    ],
+    "summary": "Cek ketersediaan tanggal",
+    "description": "Menandai tanggal yang sudah dibooking dalam rentang yang diminta.",
+    "operationId": "checkRentalAvailability",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/PlanId"
+     },
+     {
+      "name": "start_date",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date"
       },
-      "TaskStatus": {
-        "type": "string",
-        "description": "Kolom Kanban (urutan maju tetap)",
-        "enum": [
-          "draft",
-          "todo",
-          "in_progress",
-          "review",
-          "done"
-        ]
+      "example": "2026-11-01"
+     },
+     {
+      "name": "end_date",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date"
       },
-      "RentalPlan": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "facility_id": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string",
-            "example": "Villa Bulanan"
-          },
-          "period": {
-            "type": "string",
-            "enum": [
-              "daily",
-              "weekly",
-              "monthly"
-            ]
-          },
-          "price": {
-            "type": "number",
-            "example": 15000000,
-            "description": "Harga per periode (IDR)"
-          },
-          "currency": {
-            "type": "string",
-            "example": "IDR"
-          },
-          "min_periods": {
-            "type": "integer",
-            "example": 1
-          },
-          "discount_percent": {
-            "type": "number",
-            "example": 5
-          },
-          "installment_enabled": {
-            "type": "boolean"
-          },
-          "upfront_percent": {
-            "type": "number",
-            "example": 20,
-            "description": "Persentase DP"
-          },
-          "installment_count": {
-            "type": "integer",
-            "example": 3,
-            "description": "Jumlah angsuran"
-          },
-          "installment_interval_days": {
-            "type": "integer",
-            "example": 30
-          },
-          "active": {
-            "type": "boolean"
-          }
-        }
-      },
-      "RentalPlanInput": {
-        "type": "object",
-        "required": [
-          "name",
-          "period",
-          "price"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "period": {
-            "type": "string",
-            "enum": [
-              "daily",
-              "weekly",
-              "monthly"
-            ]
-          },
-          "price": {
-            "type": "number"
-          },
-          "currency": {
-            "type": "string",
-            "default": "IDR"
-          },
-          "min_periods": {
-            "type": "integer",
-            "default": 1
-          },
-          "discount_percent": {
-            "type": "number",
-            "default": 0
-          },
-          "installment_enabled": {
-            "type": "boolean",
-            "default": false
-          },
-          "upfront_percent": {
-            "type": "number",
-            "example": 20
-          },
-          "installment_count": {
-            "type": "integer",
-            "example": 3
-          },
-          "installment_interval_days": {
-            "type": "integer",
-            "default": 30
-          }
-        }
-      },
-      "RentalBookingInput": {
-        "type": "object",
-        "required": [
-          "start_date",
-          "end_date"
-        ],
-        "properties": {
-          "start_date": {
-            "type": "string",
-            "format": "date",
-            "example": "2026-11-01"
-          },
-          "end_date": {
-            "type": "string",
-            "format": "date",
-            "example": "2026-12-31"
-          },
-          "quantity": {
-            "type": "integer",
-            "default": 1,
-            "description": "Jumlah periode"
-          },
-          "pay_in_installments": {
-            "type": "boolean",
-            "default": false,
-            "description": "true \u2192 buat schedule cicilan"
-          },
-          "special_requests": {
-            "type": "string"
-          },
-          "idempotency_key": {
-            "type": "string",
-            "description": "Mencegah double submit"
-          }
-        }
-      },
-      "RentalBooking": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "rental_plan_id": {
-            "type": "integer"
-          },
-          "guest_id": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending_payment",
-              "confirmed",
-              "active",
-              "completed",
-              "cancelled"
-            ]
-          },
-          "payment_status": {
-            "type": "string",
-            "enum": [
-              "unpaid",
-              "down_payment_paid",
-              "partially_paid",
-              "paid",
-              "overdue"
-            ]
-          },
-          "start_date": {
-            "type": "string",
-            "format": "date"
-          },
-          "end_date": {
-            "type": "string",
-            "format": "date"
-          },
-          "quantity": {
-            "type": "integer"
-          },
-          "nights": {
-            "type": "integer"
-          },
-          "total_amount": {
-            "type": "number",
-            "example": 30000000
-          },
-          "down_payment_amount": {
-            "type": "number",
-            "example": 6000000
-          },
-          "paid_amount": {
-            "type": "number",
-            "example": 6000000
-          },
-          "remaining_balance": {
-            "type": "number",
-            "example": 24000000
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "InstallmentEstimate": {
-        "type": "object",
-        "description": "Contoh total 30jt, DP 20% (6jt), 3 angsuran @8jt",
-        "properties": {
-          "total_amount": {
-            "type": "number",
-            "example": 30000000
-          },
-          "down_payment": {
-            "type": "number",
-            "example": 6000000
-          },
-          "remaining_balance": {
-            "type": "number",
-            "example": 24000000
-          },
-          "installment_count": {
-            "type": "integer",
-            "example": 3
-          },
-          "interval_days": {
-            "type": "integer",
-            "example": 30
-          },
-          "installments": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "number": {
-                  "type": "integer",
-                  "example": 1
-                },
-                "amount": {
-                  "type": "number",
-                  "example": 8000000
-                },
-                "due_date": {
-                  "type": "string",
-                  "format": "date",
-                  "example": "2026-12-01"
-                }
-              }
-            }
-          }
-        }
-      },
-      "Installment": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "number": {
-            "type": "integer"
-          },
-          "amount": {
-            "type": "number"
-          },
-          "due_date": {
-            "type": "string",
-            "format": "date"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "paid",
-              "overdue"
-            ]
-          },
-          "paid_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          }
-        }
-      },
-      "RentalPayment": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "down_payment",
-              "installment",
-              "early_payoff"
-            ]
-          },
-          "amount": {
-            "type": "number"
-          },
-          "payment_method": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "succeeded",
-              "failed"
-            ]
-          },
-          "applied_installments": {
-            "type": "array",
-            "items": {
-              "type": "integer"
-            }
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "Facility": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "property_id": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "capacity": {
-            "type": "integer"
-          },
-          "price_per_slot": {
-            "type": "number"
-          }
-        }
-      },
-      "FacilityBooking": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "facility_id": {
-            "type": "integer"
-          },
-          "booking_date": {
-            "type": "string",
-            "format": "date"
-          },
-          "start_time": {
-            "type": "string"
-          },
-          "quantity": {
-            "type": "integer"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "approved",
-              "rejected",
-              "cancelled",
-              "completed"
-            ]
-          }
-        }
-      },
-      "HousekeepingBoard": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "name": {
-            "type": "string",
-            "example": "Housekeeping - Villa Sakura"
-          },
-          "property_id": {
-            "type": "integer"
-          },
-          "hotel_id": {
-            "type": "integer",
-            "nullable": true
-          },
-          "columns": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TaskStatus"
-            }
-          }
-        }
-      },
-      "HousekeepingTask": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer"
-          },
-          "board_id": {
-            "type": "integer"
-          },
-          "room_id": {
-            "type": "integer"
-          },
-          "room_number": {
-            "type": "string",
-            "example": "305"
-          },
-          "title": {
-            "type": "string",
-            "example": "Cleaning kamar 305 (checkout H+3, tidak diperpanjang)"
-          },
-          "description": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/TaskStatus"
-          },
-          "source": {
-            "type": "string",
-            "enum": [
-              "manual",
-              "auto_checkout"
-            ],
-            "example": "auto_checkout"
-          },
-          "priority": {
-            "type": "string",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "urgent"
-            ]
-          },
-          "assigned_to_id": {
-            "type": "integer",
-            "nullable": true
-          },
-          "due_at": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "attachments_count": {
-            "type": "integer",
-            "example": 2
-          },
-          "requires_image_to_advance": {
-            "type": "boolean",
-            "description": "true bila target kolom review/done"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "HousekeepingTaskDetail": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/HousekeepingTask"
-          },
-          {
+      "example": "2026-12-31"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Info ketersediaan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "available": {
+           "type": "boolean",
+           "example": true
+          },
+          "booked_ranges": {
+           "type": "array",
+           "items": {
             "type": "object",
             "properties": {
-              "attachments": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/TaskAttachment"
-                }
-              },
-              "activities": {
-                "type": "array",
-                "description": "Riwayat pergerakan kartu & event notifikasi",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "action": {
-                      "type": "string",
-                      "example": "moved_to_review"
-                    },
-                    "actor_id": {
-                      "type": "integer"
-                    },
-                    "note": {
-                      "type": "string"
-                    },
-                    "created_at": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                }
-              }
+             "start_date": {
+              "type": "string",
+              "format": "date"
+             },
+             "end_date": {
+              "type": "string",
+              "format": "date"
+             }
             }
+           }
           }
-        ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rental_plans/{id}/installment_estimate": {
+   "get": {
+    "tags": [
+     "RentalPlans"
+    ],
+    "summary": "Simulasi skema cicilan",
+    "description": "Preview DP + jadwal angsuran sebelum membuat booking (quantity harus kelipatan periode).",
+    "operationId": "installmentEstimate",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/PlanId"
+     },
+     {
+      "name": "quantity",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1
       },
-      "TaskAttachment": {
+      "description": "Jumlah periode (mis. 2 bulan)",
+      "example": 2
+     },
+     {
+      "name": "start_date",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      },
+      "example": "2026-11-01"
+     },
+     {
+      "name": "end_date",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      },
+      "example": "2026-12-31"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Estimasi cicilan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InstallmentEstimate"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Durasi tidak sesuai kelipatan periode / cicilan tidak diaktifkan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rental_plans/{rental_plan_id}/bookings": {
+   "post": {
+    "tags": [
+     "RentalBookings"
+    ],
+    "summary": "Buat booking sewa (bisa langsung pilih dicicil)",
+    "operationId": "createRentalBooking",
+    "parameters": [
+     {
+      "name": "rental_plan_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RentalBookingInput"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Booking dibuat (+ schedule cicilan bila `pay_in_installments=true`)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_booking": {
+           "$ref": "#/components/schemas/RentalBooking"
+          }
+         }
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Bentrok tanggal / idempotency key dipakai ulang dengan payload beda",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     },
+     "422": {
+      "$ref": "#/components/responses/UnprocessableEntity"
+     }
+    }
+   }
+  },
+  "/rental_bookings": {
+   "get": {
+    "tags": [
+     "RentalBookings"
+    ],
+    "summary": "Daftar booking sewa milik user",
+    "operationId": "listRentalBookings",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "pending_payment",
+        "confirmed",
+        "active",
+        "completed",
+        "cancelled"
+       ]
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar booking",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_bookings": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/RentalBooking"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rental_bookings/{id}": {
+   "get": {
+    "tags": [
+     "RentalBookings"
+    ],
+    "summary": "Detail booking + jadwal cicilan",
+    "operationId": "getRentalBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/BookingId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Detail booking",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_booking": {
+           "allOf": [
+            {
+             "$ref": "#/components/schemas/RentalBooking"
+            },
+            {
+             "type": "object",
+             "properties": {
+              "installments": {
+               "type": "array",
+               "items": {
+                "$ref": "#/components/schemas/Installment"
+               }
+              }
+             }
+            }
+           ]
+          }
+         }
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     }
+    }
+   }
+  },
+  "/rental_bookings/{id}/pay": {
+   "post": {
+    "tags": [
+     "RentalBookings"
+    ],
+    "summary": "Bayar DP / angsuran / pelunasan",
+    "description": "Dana dicocokkan otomatis: DP lebih dulu, lalu angsuran tertua.\nSaat lunas \u2192 payment_status `paid`, booking otomatis `confirmed`/`active`.\n",
+    "operationId": "payRentalBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/BookingId"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "amount"
+        ],
+        "properties": {
+         "amount": {
+          "type": "number",
+          "example": 6000000
+         },
+         "payment_method": {
+          "type": "string",
+          "enum": [
+           "transfer",
+           "card",
+           "ewallet",
+           "cash"
+          ],
+          "default": "transfer"
+         },
+         "reference": {
+          "type": "string",
+          "description": "No. referensi transfer"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Pembayaran tercatat",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "payment": {
+           "$ref": "#/components/schemas/RentalPayment"
+          },
+          "rental_booking": {
+           "$ref": "#/components/schemas/RentalBooking"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Jumlah melebihi sisa tagihan / booking dibatalkan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rental_bookings/{id}/cancel": {
+   "post": {
+    "tags": [
+     "RentalBookings"
+    ],
+    "summary": "Batalkan booking sewa",
+    "operationId": "cancelRentalBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/BookingId"
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "integer"
+         "reason": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Booking dibatalkan",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "rental_booking": {
+           "$ref": "#/components/schemas/RentalBooking"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/facilities": {
+   "get": {
+    "tags": [
+     "FacilityBookings"
+    ],
+    "summary": "Daftar fasilitas",
+    "operationId": "listFacilities",
+    "parameters": [
+     {
+      "name": "property_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "type",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "example": "gym"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar fasilitas",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "facilities": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Facility"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/facilities/{facility_id}/bookings": {
+   "post": {
+    "tags": [
+     "FacilityBookings"
+    ],
+    "summary": "Booking fasilitas",
+    "operationId": "createFacilityBooking",
+    "parameters": [
+     {
+      "name": "facility_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "booking_date",
+         "start_time"
+        ],
+        "properties": {
+         "booking_date": {
+          "type": "string",
+          "format": "date",
+          "example": "2026-10-15"
+         },
+         "start_time": {
+          "type": "string",
+          "example": "14:00"
+         },
+         "quantity": {
+          "type": "integer",
+          "default": 1
+         },
+         "special_requests": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Booking dibuat (status pending sampai disetujui host)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "booking": {
+           "$ref": "#/components/schemas/FacilityBooking"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "$ref": "#/components/responses/UnprocessableEntity"
+     }
+    }
+   }
+  },
+  "/facility_bookings/{id}/cancel": {
+   "post": {
+    "tags": [
+     "FacilityBookings"
+    ],
+    "summary": "Batalkan booking fasilitas (guest)",
+    "operationId": "cancelFacilityBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/FacilityBookingId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Dibatalkan"
+     }
+    }
+   }
+  },
+  "/admin/facility_bookings/{id}/approve": {
+   "post": {
+    "tags": [
+     "FacilityBookings"
+    ],
+    "summary": "Setujui booking (host/admin)",
+    "operationId": "approveFacilityBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/FacilityBookingId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Disetujui"
+     }
+    }
+   }
+  },
+  "/admin/facility_bookings/{id}/reject": {
+   "post": {
+    "tags": [
+     "FacilityBookings"
+    ],
+    "summary": "Tolak booking (host/admin)",
+    "operationId": "rejectFacilityBooking",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/FacilityBookingId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Ditolak"
+     }
+    }
+   }
+  },
+  "/housekeeping/boards": {
+   "get": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Daftar Kanban board housekeeping",
+    "operationId": "listHousekeepingBoards",
+    "parameters": [
+     {
+      "name": "property_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar board beserta kolom-kolomnya",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "boards": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/HousekeepingBoard"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/housekeeping/boards/{id}": {
+   "get": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Board + kartu tugas per kolom (draft/todo/in_progress/review/done)",
+    "operationId": "getHousekeepingBoard",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Isi board",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "board": {
+           "$ref": "#/components/schemas/HousekeepingBoard"
           },
-          "task_id": {
-            "type": "integer"
+          "columns": {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "status": {
+              "$ref": "#/components/schemas/TaskStatus"
+             },
+             "tasks": {
+              "type": "array",
+              "items": {
+               "$ref": "#/components/schemas/HousekeepingTask"
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks": {
+   "get": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Daftar tugas (filter status/room/board)",
+    "description": "Tugas juga dibuat **otomatis** oleh job harian 06:00: kamar yang checkout dan\ntidak ada perpanjangan booking setelah **H+3** (grace period) \u2192 kartu masuk kolom\n`draft` + notifikasi ke housekeeper/host + room di-set `maintenance`. Idempoten.\n",
+    "operationId": "listHousekeepingTasks",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "schema": {
+       "$ref": "#/components/schemas/TaskStatus"
+      }
+     },
+     {
+      "name": "room_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "board_id",
+      "in": "query",
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar tugas",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "tasks": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/HousekeepingTask"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Buat tugas manual (mulai dari kolom draft)",
+    "operationId": "createHousekeepingTask",
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "room_id"
+        ],
+        "properties": {
+         "room_id": {
+          "type": "integer"
+         },
+         "board_id": {
+          "type": "integer",
+          "nullable": true
+         },
+         "title": {
+          "type": "string",
+          "example": "Deep cleaning kamar 305"
+         },
+         "description": {
+          "type": "string"
+         },
+         "priority": {
+          "type": "string",
+          "enum": [
+           "low",
+           "medium",
+           "high",
+           "urgent"
+          ],
+          "default": "medium"
+         },
+         "due_at": {
+          "type": "string",
+          "format": "date-time"
+         },
+         "assigned_to_id": {
+          "type": "integer",
+          "nullable": true
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Tugas dibuat",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "task": {
+           "$ref": "#/components/schemas/HousekeepingTask"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "$ref": "#/components/responses/UnprocessableEntity"
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}": {
+   "get": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Detail tugas (termasuk riwayat & lampiran)",
+    "operationId": "getHousekeepingTask",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Detail tugas",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "task": {
+           "$ref": "#/components/schemas/HousekeepingTaskDetail"
+          }
+         }
+        }
+       }
+      }
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}/move": {
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Pindahkan kartu antar kolom (drag & drop)",
+    "description": "Urutan kolom wajib maju: `draft \u2192 todo \u2192 in_progress \u2192 review \u2192 done`.\nKartu **tidak bisa dipindah ke `review`/`done` tanpa minimal 1 image terupload**.\nSaat `done` dan tidak ada tugas aktif lain untuk kamar \u2192 room kembali `available`.\n",
+    "operationId": "moveHousekeepingTask",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "to_status"
+        ],
+        "properties": {
+         "to_status": {
+          "$ref": "#/components/schemas/TaskStatus"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Kartu berpindah kolom",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "task": {
+           "$ref": "#/components/schemas/HousekeepingTask"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Lompat kolom ilegal / belum ada foto bukti / transisi invalid",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}/advance": {
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Majukan kartu satu kolom ke depan",
+    "operationId": "advanceHousekeepingTask",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kartu maju satu kolom",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "task": {
+           "$ref": "#/components/schemas/HousekeepingTask"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Butuh minimal 1 image sebelum review/done",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}/upload": {
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Upload image bukti kerja (multipart)",
+    "description": "Wajib \u22651 image sebelum kartu boleh masuk kolom `review`/`done`.",
+    "operationId": "uploadHousekeepingTaskImage",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "image"
+        ],
+        "properties": {
+         "image": {
+          "type": "string",
+          "format": "binary"
+         },
+         "caption": {
+          "type": "string",
+          "example": "Foto setelah bersih"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Image tersimpan (Active Storage)",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "attachment": {
+           "$ref": "#/components/schemas/TaskAttachment"
+          }
+         }
+        }
+       }
+      }
+     },
+     "422": {
+      "$ref": "#/components/responses/UnprocessableEntity"
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}/assign": {
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Assign housekeeper + kirim notifikasi",
+    "operationId": "assignHousekeepingTask",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "assigned_to_id"
+        ],
+        "properties": {
+         "assigned_to_id": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Tertugas & dinotifikasi"
+     }
+    }
+   }
+  },
+  "/housekeeping/tasks/{id}/cancel": {
+   "post": {
+    "tags": [
+     "Housekeeping"
+    ],
+    "summary": "Batalkan tugas",
+    "operationId": "cancelHousekeepingTask",
+    "parameters": [
+     {
+      "$ref": "#/components/parameters/TaskId"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Tugas dibatalkan"
+     }
+    }
+   }
+  },
+  "/portals/host_dashboard": {
+   "get": {
+    "tags": [
+     "Portals"
+    ],
+    "summary": "Dashboard host",
+    "description": "Ringkasan booking masuk, pendapatan, tugas housekeeping aktif, angsuran jatuh tempo.",
+    "operationId": "hostDashboard",
+    "responses": {
+     "200": {
+      "description": "Data dashboard host",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "stats": {
+           "type": "object"
           },
-          "caption": {
-            "type": "string"
+          "upcoming_bookings": {
+           "type": "array",
+           "items": {
+            "type": "object"
+           }
           },
-          "url": {
-            "type": "string",
-            "description": "URL Active Storage blob"
+          "housekeeping_summary": {
+           "type": "object"
           },
-          "content_type": {
-            "type": "string",
-            "example": "image/jpeg"
+          "overdue_installments": {
+           "type": "array",
+           "items": {
+            "type": "object"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/portals/guest_dashboard": {
+   "get": {
+    "tags": [
+     "Portals"
+    ],
+    "summary": "Dashboard guest",
+    "description": "Booking aktif, jadwal cicilan berikutnya, wishlist.",
+    "operationId": "guestDashboard",
+    "responses": {
+     "200": {
+      "description": "Data dashboard guest",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "properties": {
+          "active_bookings": {
+           "type": "array",
+           "items": {
+            "type": "object"
+           }
           },
-          "byte_size": {
-            "type": "integer"
+          "next_installment": {
+           "$ref": "#/components/schemas/Installment"
+          },
+          "wishlist": {
+           "type": "array",
+           "items": {
+            "type": "object"
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/master_data/hotels/{hotel_id}/grid": {
+   "get": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Floor plan grid (lantai + unit kamar tersusun grid)",
+    "operationId": "getFloorGrid",
+    "parameters": [
+     {
+      "name": "hotel_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Daftar floors berisi rooms dengan koordinat grid_row/grid_col"
+     }
+    }
+   }
+  },
+  "/master_data/hotels/{hotel_id}/floors": {
+   "get": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "List lantai",
+    "operationId": "listFloors",
+    "parameters": [
+     {
+      "name": "hotel_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Tambah floor baru",
+    "operationId": "createFloor",
+    "parameters": [
+     {
+      "name": "hotel_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "properties": {
+         "floor_number": {
+          "type": "integer"
+         },
+         "floor_name": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "floor_number"
+        ]
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Floor dibuat"
+     },
+     "422": {
+      "description": "Duplikat nomor lantai"
+     }
+    }
+   }
+  },
+  "/master_data/floors/{id}": {
+   "patch": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Edit nama/nomor lantai",
+    "operationId": "updateFloor",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Hapus lantai (blokir bila masih ada unit)",
+    "operationId": "deleteFloor",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     },
+     "422": {
+      "description": "Lantai masih punya unit"
+     }
+    }
+   }
+  },
+  "/master_data/hotels/{hotel_id}/rooms": {
+   "post": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Tambah unit kamar (auto-place di grid)",
+    "operationId": "createRoom",
+    "parameters": [
+     {
+      "name": "hotel_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "room_number",
+         "room_type_id"
+        ],
+        "properties": {
+         "room_number": {
+          "type": "string"
+         },
+         "room_type_id": {
+          "type": "integer"
+         },
+         "floor_id": {
+          "type": "integer"
+         },
+         "status": {
+          "type": "string",
+          "enum": [
+           "available",
+           "occupied",
+           "maintenance",
+           "out_of_order"
+          ]
+         },
+         "grid_row": {
+          "type": "integer"
+         },
+         "grid_col": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Unit dibuat"
+     }
+    }
+   }
+  },
+  "/master_data/rooms/{id}": {
+   "get": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Detail unit (termasuk ringkasan smart lock & keys)",
+    "operationId": "getRoom",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Update unit (status, posisi grid drag-drop, tipe)",
+    "operationId": "updateRoom",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "MasterData"
+    ],
+    "summary": "Hapus unit (blokir bila passcode aktif masih ada)",
+    "operationId": "deleteRoom",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   }
+  },
+  "/master_data/rooms/{room_id}/smart_lock": {
+   "get": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Setup lock unit \u2014 master config + master keys + temporary keys",
+    "operationId": "getRoomSmartLock",
+    "parameters": [
+     {
+      "name": "room_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "smart_lock: null bila belum dipasang"
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Pasang/config device 7EVEN KEY atau TTLOCK",
+    "operationId": "installSmartLock",
+    "parameters": [
+     {
+      "name": "room_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "brand"
+        ],
+        "properties": {
+         "brand": {
+          "type": "string",
+          "enum": [
+           "seven_key",
+           "ttlock"
+          ]
+         },
+         "device_name": {
+          "type": "string"
+         },
+         "mac_address": {
+          "type": "string",
+          "description": "wajib utk 7EVEN KEY"
+         },
+         "device_trid": {
+          "type": "string",
+          "description": "wajib utk TTLOCK"
+         },
+         "device_pass_code": {
+          "type": "string"
+         },
+         "device_api_key": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Device tersimpan"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/pair": {
+   "post": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Pairing device ke cloud provider",
+    "operationId": "pairSmartLock",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Terpairing"
+     },
+     "422": {
+      "description": "Pairing gagal"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/refresh": {
+   "post": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Sinkron baterai/status online",
+    "operationId": "refreshSmartLock",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/master_config": {
+   "patch": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Set/ganti MASTER PASSCODE (PIN induk lock) via gateway",
+    "operationId": "setMasterPasscode",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "master_passcode"
+        ],
+        "properties": {
+         "master_passcode": {
+          "type": "string",
+          "pattern": "^[0-9]{4,10}$"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Tersimpan & dikirim ke lock"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/master_keys": {
+   "post": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Tambah MASTER KEY (rfid_card | pin | fingerprint | app_ble)",
+    "operationId": "addMasterKey",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "key_type",
+         "name"
+        ],
+        "properties": {
+         "key_type": {
+          "type": "string",
+          "enum": [
+           "rfid_card",
+           "pin",
+           "fingerprint",
+           "app_ble"
+          ]
+         },
+         "name": {
+          "type": "string"
+         },
+         "identifier": {
+          "type": "string"
+         },
+         "pin_code": {
+          "type": "string"
+         },
+         "expires_on": {
+          "type": "string",
+          "format": "date"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Master key dibuat"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/master_keys/{master_key_id}": {
+   "delete": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Cabut master key",
+    "operationId": "revokeMasterKey",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "master_key_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/temporary_keys": {
+   "post": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Generate TEMPORARY KEY / passcode (window waktu + times limit, auto-sync ke lock)",
+    "operationId": "generateTempKey",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "start_at",
+         "end_at"
+        ],
+        "properties": {
+         "kind": {
+          "type": "string",
+          "enum": [
+           "passcode",
+           "ic_card"
+          ],
+          "default": "passcode"
+         },
+         "label": {
+          "type": "string"
+         },
+         "start_at": {
+          "type": "string",
+          "format": "date-time"
+         },
+         "end_at": {
+          "type": "string",
+          "format": "date-time"
+         },
+         "times_limit": {
+          "type": "integer",
+          "example": 20
+         },
+         "booking_id": {
+          "type": "integer"
+         },
+         "rental_booking_id": {
+          "type": "integer"
+         },
+         "user_id": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Passcode generated (disembunyikan bila window habis)"
+     }
+    }
+   }
+  },
+  "/master_data/smart_locks/{id}/temporary_keys/{temp_key_id}": {
+   "delete": {
+    "tags": [
+     "SmartLock"
+    ],
+    "summary": "Cabut temporary key / passcode",
+    "operationId": "revokeTempKey",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     },
+     {
+      "name": "temp_key_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "bearerAuth": {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "JWT"
+   }
+  },
+  "parameters": {
+   "PlanId": {
+    "name": "id",
+    "in": "path",
+    "required": true,
+    "schema": {
+     "type": "integer"
+    }
+   },
+   "BookingId": {
+    "name": "id",
+    "in": "path",
+    "required": true,
+    "schema": {
+     "type": "integer"
+    }
+   },
+   "FacilityBookingId": {
+    "name": "id",
+    "in": "path",
+    "required": true,
+    "schema": {
+     "type": "integer"
+    }
+   },
+   "TaskId": {
+    "name": "id",
+    "in": "path",
+    "required": true,
+    "schema": {
+     "type": "integer"
+    }
+   }
+  },
+  "responses": {
+   "NotFound": {
+    "description": "Resource tidak ditemukan",
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/Error"
+      }
+     }
+    }
+   },
+   "UnprocessableEntity": {
+    "description": "Validasi gagal",
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/Error"
+      }
+     }
+    }
+   }
+  },
+  "schemas": {
+   "Error": {
+    "type": "object",
+    "properties": {
+     "error": {
+      "type": "string",
+      "example": "Durasi sewa harus kelipatan periode (monthly = 30 malam)"
+     },
+     "code": {
+      "type": "string",
+      "example": "RENTAL_PERIOD_MISMATCH"
+     }
+    }
+   },
+   "TaskStatus": {
+    "type": "string",
+    "description": "Kolom Kanban (urutan maju tetap)",
+    "enum": [
+     "draft",
+     "todo",
+     "in_progress",
+     "review",
+     "done"
+    ]
+   },
+   "RentalPlan": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "facility_id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string",
+      "example": "Villa Bulanan"
+     },
+     "period": {
+      "type": "string",
+      "enum": [
+       "daily",
+       "weekly",
+       "monthly"
+      ]
+     },
+     "price": {
+      "type": "number",
+      "example": 15000000,
+      "description": "Harga per periode (IDR)"
+     },
+     "currency": {
+      "type": "string",
+      "example": "IDR"
+     },
+     "min_periods": {
+      "type": "integer",
+      "example": 1
+     },
+     "discount_percent": {
+      "type": "number",
+      "example": 5
+     },
+     "installment_enabled": {
+      "type": "boolean"
+     },
+     "upfront_percent": {
+      "type": "number",
+      "example": 20,
+      "description": "Persentase DP"
+     },
+     "installment_count": {
+      "type": "integer",
+      "example": 3,
+      "description": "Jumlah angsuran"
+     },
+     "installment_interval_days": {
+      "type": "integer",
+      "example": 30
+     },
+     "active": {
+      "type": "boolean"
+     }
+    }
+   },
+   "RentalPlanInput": {
+    "type": "object",
+    "required": [
+     "name",
+     "period",
+     "price"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "period": {
+      "type": "string",
+      "enum": [
+       "daily",
+       "weekly",
+       "monthly"
+      ]
+     },
+     "price": {
+      "type": "number"
+     },
+     "currency": {
+      "type": "string",
+      "default": "IDR"
+     },
+     "min_periods": {
+      "type": "integer",
+      "default": 1
+     },
+     "discount_percent": {
+      "type": "number",
+      "default": 0
+     },
+     "installment_enabled": {
+      "type": "boolean",
+      "default": false
+     },
+     "upfront_percent": {
+      "type": "number",
+      "example": 20
+     },
+     "installment_count": {
+      "type": "integer",
+      "example": 3
+     },
+     "installment_interval_days": {
+      "type": "integer",
+      "default": 30
+     }
+    }
+   },
+   "RentalBookingInput": {
+    "type": "object",
+    "required": [
+     "start_date",
+     "end_date"
+    ],
+    "properties": {
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "example": "2026-11-01"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date",
+      "example": "2026-12-31"
+     },
+     "quantity": {
+      "type": "integer",
+      "default": 1,
+      "description": "Jumlah periode"
+     },
+     "pay_in_installments": {
+      "type": "boolean",
+      "default": false,
+      "description": "true \u2192 buat schedule cicilan"
+     },
+     "special_requests": {
+      "type": "string"
+     },
+     "idempotency_key": {
+      "type": "string",
+      "description": "Mencegah double submit"
+     }
+    }
+   },
+   "RentalBooking": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "rental_plan_id": {
+      "type": "integer"
+     },
+     "guest_id": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending_payment",
+       "confirmed",
+       "active",
+       "completed",
+       "cancelled"
+      ]
+     },
+     "payment_status": {
+      "type": "string",
+      "enum": [
+       "unpaid",
+       "down_payment_paid",
+       "partially_paid",
+       "paid",
+       "overdue"
+      ]
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "quantity": {
+      "type": "integer"
+     },
+     "nights": {
+      "type": "integer"
+     },
+     "total_amount": {
+      "type": "number",
+      "example": 30000000
+     },
+     "down_payment_amount": {
+      "type": "number",
+      "example": 6000000
+     },
+     "paid_amount": {
+      "type": "number",
+      "example": 6000000
+     },
+     "remaining_balance": {
+      "type": "number",
+      "example": 24000000
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "InstallmentEstimate": {
+    "type": "object",
+    "description": "Contoh total 30jt, DP 20% (6jt), 3 angsuran @8jt",
+    "properties": {
+     "total_amount": {
+      "type": "number",
+      "example": 30000000
+     },
+     "down_payment": {
+      "type": "number",
+      "example": 6000000
+     },
+     "remaining_balance": {
+      "type": "number",
+      "example": 24000000
+     },
+     "installment_count": {
+      "type": "integer",
+      "example": 3
+     },
+     "interval_days": {
+      "type": "integer",
+      "example": 30
+     },
+     "installments": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "number": {
+         "type": "integer",
+         "example": 1
+        },
+        "amount": {
+         "type": "number",
+         "example": 8000000
+        },
+        "due_date": {
+         "type": "string",
+         "format": "date",
+         "example": "2026-12-01"
+        }
+       }
+      }
+     }
+    }
+   },
+   "Installment": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "number": {
+      "type": "integer"
+     },
+     "amount": {
+      "type": "number"
+     },
+     "due_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "paid",
+       "overdue"
+      ]
+     },
+     "paid_at": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+     }
+    }
+   },
+   "RentalPayment": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "down_payment",
+       "installment",
+       "early_payoff"
+      ]
+     },
+     "amount": {
+      "type": "number"
+     },
+     "payment_method": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "succeeded",
+       "failed"
+      ]
+     },
+     "applied_installments": {
+      "type": "array",
+      "items": {
+       "type": "integer"
+      }
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "Facility": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "property_id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "capacity": {
+      "type": "integer"
+     },
+     "price_per_slot": {
+      "type": "number"
+     }
+    }
+   },
+   "FacilityBooking": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "facility_id": {
+      "type": "integer"
+     },
+     "booking_date": {
+      "type": "string",
+      "format": "date"
+     },
+     "start_time": {
+      "type": "string"
+     },
+     "quantity": {
+      "type": "integer"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "approved",
+       "rejected",
+       "cancelled",
+       "completed"
+      ]
+     }
+    }
+   },
+   "HousekeepingBoard": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "name": {
+      "type": "string",
+      "example": "Housekeeping - Villa Sakura"
+     },
+     "property_id": {
+      "type": "integer"
+     },
+     "hotel_id": {
+      "type": "integer",
+      "nullable": true
+     },
+     "columns": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/TaskStatus"
+      }
+     }
+    }
+   },
+   "HousekeepingTask": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "board_id": {
+      "type": "integer"
+     },
+     "room_id": {
+      "type": "integer"
+     },
+     "room_number": {
+      "type": "string",
+      "example": "305"
+     },
+     "title": {
+      "type": "string",
+      "example": "Cleaning kamar 305 (checkout H+3, tidak diperpanjang)"
+     },
+     "description": {
+      "type": "string"
+     },
+     "status": {
+      "$ref": "#/components/schemas/TaskStatus"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "manual",
+       "auto_checkout"
+      ],
+      "example": "auto_checkout"
+     },
+     "priority": {
+      "type": "string",
+      "enum": [
+       "low",
+       "medium",
+       "high",
+       "urgent"
+      ]
+     },
+     "assigned_to_id": {
+      "type": "integer",
+      "nullable": true
+     },
+     "due_at": {
+      "type": "string",
+      "format": "date-time",
+      "nullable": true
+     },
+     "attachments_count": {
+      "type": "integer",
+      "example": 2
+     },
+     "requires_image_to_advance": {
+      "type": "boolean",
+      "description": "true bila target kolom review/done"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "HousekeepingTaskDetail": {
+    "allOf": [
+     {
+      "$ref": "#/components/schemas/HousekeepingTask"
+     },
+     {
+      "type": "object",
+      "properties": {
+       "attachments": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/TaskAttachment"
+        }
+       },
+       "activities": {
+        "type": "array",
+        "description": "Riwayat pergerakan kartu & event notifikasi",
+        "items": {
+         "type": "object",
+         "properties": {
+          "action": {
+           "type": "string",
+           "example": "moved_to_review"
+          },
+          "actor_id": {
+           "type": "integer"
+          },
+          "note": {
+           "type": "string"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time"
+           "type": "string",
+           "format": "date-time"
           }
+         }
         }
+       }
       }
+     }
+    ]
+   },
+   "TaskAttachment": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "task_id": {
+      "type": "integer"
+     },
+     "caption": {
+      "type": "string"
+     },
+     "url": {
+      "type": "string",
+      "description": "URL Active Storage blob"
+     },
+     "content_type": {
+      "type": "string",
+      "example": "image/jpeg"
+     },
+     "byte_size": {
+      "type": "integer"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
     }
+   }
   }
+ },
+ "x-tag-groups": [
+  {
+   "name": "MasterData",
+   "description": "Master data floor & unit kamar (grid system)"
+  },
+  {
+   "name": "SmartLock",
+   "description": "Setup 7EVEN KEY / TTLOCK \u2014 master config, master key, temporary key"
+  }
+ ]
 }

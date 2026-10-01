@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { getRentalBooking, payRentalBooking, cancelRentalBooking, formatIDR } from '../api/client.js';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getRentalBooking, payRentalBooking, cancelRentalBooking, formatIDR, createConversation, waLink } from '../api/client.js';
 
 export default function BookingDetailPage() {
   const { id } = useParams();
+  const nav = useNavigate();
   const [booking, setBooking] = useState(null);
   const [amount, setAmount] = useState('');
   const [msg, setMsg] = useState('');
@@ -26,6 +27,16 @@ export default function BookingDetailPage() {
     await cancelRentalBooking(id); reload();
   };
 
+  const startChat = async () => {
+    try {
+      const conv = await createConversation(booking.id);
+      nav(`/chat/${conv.id}`);
+    } catch (e) { alert('Gagal memulai chat: ' + (e.response?.data?.errors || e.message)); }
+  };
+
+  const hostPhone = booking.host?.phone || booking.property?.host?.phone || null;
+  const hostWa = waLink(hostPhone, `Halo, saya penyewa ${booking.rental_plan?.name || ''} (booking #${booking.id}).`);
+
   const inst = booking.installments || [];
   const nextUnpaid = inst.find((i) => i.status !== 'paid');
 
@@ -40,6 +51,8 @@ export default function BookingDetailPage() {
           <input type="number" placeholder={nextUnpaid ? `Bayar ${formatIDR(nextUnpaid.amount)}` : 'Jumlah'} value={amount} onChange={(e) => setAmount(e.target.value)} style={{ width: 180 }} />
           <button onClick={pay} disabled={!amount}>💳 Bayar {nextUnpaid ? `Angsuran #${nextUnpaid.number}` : 'DP / Pelunasan'}</button>
           {!['completed', 'cancelled'].includes(booking.status) && <button className="secondary" onClick={cancel}>Batalkan</button>}
+          <button className="btn-wa" onClick={startChat}>💬 Chat dengan Host</button>
+          {hostWa && <a className="btn-wa" style={{ textDecoration:'none' }} href={hostWa} target="_blank" rel="noreferrer">Hubungi via WhatsApp ↗</a>}
         </div>
         <p className="muted">{msg}</p>
       </div>

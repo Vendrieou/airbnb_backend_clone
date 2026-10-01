@@ -45,8 +45,9 @@ class HousekeepingNotifier
     end
 
     def deliver(user, title:, body:, kind:)
-      # Integrasikan dengan kanal nyata (ActionMailer / FCM / Message model) di sini.
       Rails.logger.info("[HousekeepingNotifier][#{kind}] to=#{user.id}: #{title}")
+      # Kanal WhatsApp out-of-app (provider via ENV["WHATSAPP_PROVIDER"], default: fake/log)
+      WhatsappNotifier.notify(user, "*#{title}*\n#{body}") if defined?(WhatsappNotifier)
     rescue StandardError => e
       Rails.logger.warn("[HousekeepingNotifier] gagal: #{e.message}")
     end

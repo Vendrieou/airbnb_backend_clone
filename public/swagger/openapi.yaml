@@ -675,6 +675,231 @@ paths:
                   next_installment: { $ref: '#/components/schemas/Installment' }
                   wishlist: { type: array, items: { type: object } }
 
+
+  /master_data/hotels/{hotel_id}/grid:
+    get:
+      tags: [MasterData]
+      summary: Floor plan grid (lantai + unit kamar tersusun grid)
+      operationId: getFloorGrid
+      parameters:
+        - { name: hotel_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Daftar floors berisi rooms dengan koordinat grid_row/grid_col }
+  /master_data/hotels/{hotel_id}/floors:
+    get:
+      tags: [MasterData]
+      summary: List lantai
+      operationId: listFloors
+      parameters:
+        - { name: hotel_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [MasterData]
+      summary: Tambah floor baru
+      operationId: createFloor
+      parameters:
+        - { name: hotel_id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { floor_number: { type: integer }, floor_name: { type: string } }, required: [floor_number] }
+      responses:
+        '201': { description: Floor dibuat }
+        '422': { description: Duplikat nomor lantai }
+  /master_data/floors/{id}:
+    patch:
+      tags: [MasterData]
+      summary: Edit nama/nomor lantai
+      operationId: updateFloor
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [MasterData]
+      summary: Hapus lantai (blokir bila masih ada unit)
+      operationId: deleteFloor
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+        '422': { description: Lantai masih punya unit }
+  /master_data/hotels/{hotel_id}/rooms:
+    post:
+      tags: [MasterData]
+      summary: Tambah unit kamar (auto-place di grid)
+      operationId: createRoom
+      parameters:
+        - { name: hotel_id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [room_number, room_type_id]
+              properties:
+                room_number: { type: string }
+                room_type_id: { type: integer }
+                floor_id: { type: integer }
+                status: { type: string, enum: [available, occupied, maintenance, out_of_order] }
+                grid_row: { type: integer }
+                grid_col: { type: integer }
+      responses:
+        '201': { description: Unit dibuat }
+  /master_data/rooms/{id}:
+    get:
+      tags: [MasterData]
+      summary: Detail unit (termasuk ringkasan smart lock & keys)
+      operationId: getRoom
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+    patch:
+      tags: [MasterData]
+      summary: Update unit (status, posisi grid drag-drop, tipe)
+      operationId: updateRoom
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+    delete:
+      tags: [MasterData]
+      summary: Hapus unit (blokir bila passcode aktif masih ada)
+      operationId: deleteRoom
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+  /master_data/rooms/{room_id}/smart_lock:
+    get:
+      tags: [SmartLock]
+      summary: Setup lock unit — master config + master keys + temporary keys
+      operationId: getRoomSmartLock
+      parameters:
+        - { name: room_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: 'smart_lock: null bila belum dipasang' }
+    post:
+      tags: [SmartLock]
+      summary: Pasang/config device 7EVEN KEY atau TTLOCK
+      operationId: installSmartLock
+      parameters:
+        - { name: room_id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [brand]
+              properties:
+                brand: { type: string, enum: [seven_key, ttlock] }
+                device_name: { type: string }
+                mac_address: { type: string, description: "wajib utk 7EVEN KEY" }
+                device_trid: { type: string, description: "wajib utk TTLOCK" }
+                device_pass_code: { type: string }
+                device_api_key: { type: string }
+      responses:
+        '201': { description: Device tersimpan }
+  /master_data/smart_locks/{id}/pair:
+    post:
+      tags: [SmartLock]
+      summary: Pairing device ke cloud provider
+      operationId: pairSmartLock
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: Terpairing }
+        '422': { description: Pairing gagal }
+  /master_data/smart_locks/{id}/refresh:
+    post:
+      tags: [SmartLock]
+      summary: Sinkron baterai/status online
+      operationId: refreshSmartLock
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+  /master_data/smart_locks/{id}/master_config:
+    patch:
+      tags: [SmartLock]
+      summary: Set/ganti MASTER PASSCODE (PIN induk lock) via gateway
+      operationId: setMasterPasscode
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [master_passcode], properties: { master_passcode: { type: string, pattern: '^[0-9]{4,10}$' } } }
+      responses:
+        '200': { description: Tersimpan & dikirim ke lock }
+  /master_data/smart_locks/{id}/master_keys:
+    post:
+      tags: [SmartLock]
+      summary: Tambah MASTER KEY (rfid_card | pin | fingerprint | app_ble)
+      operationId: addMasterKey
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key_type, name]
+              properties:
+                key_type: { type: string, enum: [rfid_card, pin, fingerprint, app_ble] }
+                name: { type: string }
+                identifier: { type: string }
+                pin_code: { type: string }
+                expires_on: { type: string, format: date }
+      responses:
+        '201': { description: Master key dibuat }
+  /master_data/smart_locks/{id}/master_keys/{master_key_id}:
+    delete:
+      tags: [SmartLock]
+      summary: Cabut master key
+      operationId: revokeMasterKey
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: master_key_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+  /master_data/smart_locks/{id}/temporary_keys:
+    post:
+      tags: [SmartLock]
+      summary: Generate TEMPORARY KEY / passcode (window waktu + times limit, auto-sync ke lock)
+      operationId: generateTempKey
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start_at, end_at]
+              properties:
+                kind: { type: string, enum: [passcode, ic_card], default: passcode }
+                label: { type: string }
+                start_at: { type: string, format: date-time }
+                end_at: { type: string, format: date-time }
+                times_limit: { type: integer, example: 20 }
+                booking_id: { type: integer }
+                rental_booking_id: { type: integer }
+                user_id: { type: integer }
+      responses:
+        '201': { description: Passcode generated (disembunyikan bila window habis) }
+  /master_data/smart_locks/{id}/temporary_keys/{temp_key_id}:
+    delete:
+      tags: [SmartLock]
+      summary: Cabut temporary key / passcode
+      operationId: revokeTempKey
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: temp_key_id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -908,3 +1133,10 @@ components:
         content_type: { type: string, example: image/jpeg }
         byte_size: { type: integer }
         created_at: { type: string, format: date-time }
+
+# ---- tag groups (portal navigation) ----
+x-tag-groups:
+  - name: MasterData
+    description: Master data floor & unit kamar (grid system)
+  - name: SmartLock
+    description: Setup 7EVEN KEY / TTLOCK — master config, master key, temporary key

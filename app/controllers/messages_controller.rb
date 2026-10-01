@@ -10,7 +10,7 @@ class MessagesController < ApplicationController
       .page(params[:page])
       .per(20)
     
-    render json: { messages: @messages }, status: :ok
+    render json: { messages: @messages.map { |m| message_json(m) } }, status: :ok
   end
 
   def create
@@ -19,19 +19,20 @@ class MessagesController < ApplicationController
     
     if @message.save
       MessageBroadcaster.new(@message).call
-      render json: { message: @message }, status: :created
+      render json: { message: message_json(@message) }, status: :created
     else
       render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
     end
   end
 
   def show
-    render json: { message: @message }, status: :ok
+    render json: { message: message_json(@message) }, status: :ok
   end
 
   def mark_as_read
     if @message.update(read: true, read_at: Time.current)
-      render json: { message: @message }, status: :ok
+      @message.apply_delivery_status!('read') if @message.status.to_i < Message::STATUSES[:read]
+      render json: { message: message_json(@message.reload) }, status: :ok
     else
       render json: { errors: @message.errors.full_messages }, status: :unprocessable_entity
     end
@@ -62,6 +63,22 @@ class MessagesController < ApplicationController
   end
 
   def message_params
-    params.require(:message).permit(:body, :message_type)
+    params.require(:message).permit(:body, :message_type, :client_message_id)
+  end
+
+  def message_json(m)
+    {
+      id: m.id,
+      client_message_id: m.client_message_id,
+      conversation_id: m.conversation_id,
+      body: m.body,
+      message_type: m.message_type,
+      sender_id: m.sender_id,
+      sender_name: m.sender&.try(:name),
+      mine: m.sender_id == current_user.id,
+      status: m.status_name,
+      read: m.read,
+      created_at: m.created_at.iso8601,
+    }
   end
 end
