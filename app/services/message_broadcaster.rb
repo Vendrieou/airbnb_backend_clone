@@ -44,7 +44,10 @@ class MessageBroadcaster < ApplicationService
       sender_name: message.sender&.name,
       created_at: message.created_at.iso8601,
       message_type: message.message_type,
-      read: message.read
+      read: message.read,
+      client_message_id: message.try(:client_message_id),
+      status: message.try(:status_name) || 'pending',
+      mine_sender_user_id: message.sender_id
     }
   end
 end

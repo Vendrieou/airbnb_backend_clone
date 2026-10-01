@@ -1,4 +1,8 @@
 class Hotel < ApplicationRecord
+  # Hotel dioperasikan oleh sebuah property (host yang sama).
+  belongs_to :property, optional: true
+
+  has_many :housekeeping_boards, dependent: :destroy
   has_many :hotel_floors, dependent: :destroy
   has_many :room_types, dependent: :destroy
   has_many :rooms, through: :room_types

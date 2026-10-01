@@ -2,6 +2,7 @@ class Room < ApplicationRecord
   belongs_to :room_type
   belongs_to :floor, class_name: 'HotelFloor', optional: true
   has_many :invoice_lines, dependent: :nullify
+  has_one :smart_lock_device, dependent: :destroy
 
   validates :room_number, presence: true, uniqueness: { scope: :room_type_id }
   validates :status, inclusion: { 
@@ -37,5 +38,14 @@ class Room < ApplicationRecord
   # Return room to service
   def return_to_service!
     update!(status: 'available', notes: nil)
+  end
+
+  def maintenance?
+    status == 'maintenance'
+  end
+
+  # Kamar butuh housekeeping bila masih ada task terbuka.
+  def needs_housekeeping?
+    HousekeepingTask.open.for_room(id).exists?
   end
 end
