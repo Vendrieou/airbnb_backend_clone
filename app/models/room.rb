@@ -38,4 +38,13 @@ class Room < ApplicationRecord
   def return_to_service!
     update!(status: 'available', notes: nil)
   end
+
+  def maintenance?
+    status == 'maintenance'
+  end
+
+  # Kamar butuh housekeeping bila masih ada task terbuka.
+  def needs_housekeeping?
+    HousekeepingTask.open.for_room(id).exists?
+  end
 end

@@ -29,6 +29,38 @@
   resources :facilities, only: [:index, :show] do
     resources :bookings, only: [:create], controller: 'facility_bookings'
     resources :reviews, only: [:create], controller: 'facility_reviews'
+    resources :rental_plans, only: [:create], controller: 'rental_plans'
+  end
+
+  # Rental plans: sewa harian / mingguan / bulanan + opsi cicilan
+  resources :rental_plans, only: [:index, :show, :create] do
+    member do
+      get :availability
+      get :installment_estimate
+    end
+    resources :bookings, only: [:create], controller: 'rental_bookings'
+  end
+
+  resources :rental_bookings, only: [:index, :show] do
+    member do
+      post :cancel
+      post :pay
+    end
+  end
+
+  # Housekeeping: Kanban board (draft -> todo -> in_progress -> review -> done)
+  # + task otomatis saat kamar checkout tidak diperpanjang setelah H-3
+  namespace :housekeeping do
+    resources :boards, only: [:index, :show], controller: 'boards'
+    resources :tasks, only: [:index, :show, :create], controller: 'tasks' do
+      member do
+        patch :move
+        post :advance
+        post :upload
+        patch :assign
+        post :cancel
+      end
+    end
   end
   
   resources :facility_bookings, only: [:index, :show] do
@@ -39,6 +71,9 @@
   
   # Facility availability API endpoint
   get '/api/facilities/:id/availability', to: 'facilities#availability', as: :facility_availability
+
+  # Swagger / OpenAPI docs (static under public/swagger)
+  get '/swagger', to: redirect('/swagger/index.html'), as: :swagger_docs
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

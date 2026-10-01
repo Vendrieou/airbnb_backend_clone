@@ -2,6 +2,10 @@ class Facility < ApplicationRecord
   belongs_to :property
   has_many :facility_bookings, dependent: :destroy
   has_many :facility_reviews, dependent: :destroy
+
+  # Rental plans (sewa harian/mingguan/bulanan dengan opsi cicilan)
+  has_many :rental_plans, dependent: :destroy
+  has_many :rental_bookings, dependent: :destroy
   
   validates :name, :facility_type, presence: true
   validates :price, numericality: { greater_than_or_equal_to: 0 }

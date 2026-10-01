@@ -8,6 +8,9 @@ class Property < ApplicationRecord
   has_many :facilities, dependent: :destroy
   has_many :facility_bookings, dependent: :destroy
   has_many :facility_reviews, through: :facilities
+
+  # Rental (sewa harian/mingguan/bulanan + cicilan) associations
+  has_many :rental_bookings, dependent: :destroy
   
   # Optimized availability check using exists? instead of none?
   def available?(check_in, check_out)
